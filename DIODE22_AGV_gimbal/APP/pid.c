@@ -49,7 +49,8 @@ void PID_Init(
     uint32_t 			intergral_limit,
     float 				kp,
     float 				ki,
-    float 				kd)
+    float 				kd,
+	  float I_Separation,float gama )
 {
     pid->max_iout = intergral_limit;
     pid->max_out = maxout;
@@ -58,13 +59,15 @@ void PID_Init(
     pid->Kp = kp;
     pid->Ki = ki;
     pid->Kd = kd;
+    pid->gama = gama;
     pid->Dbuf[0] = pid->Dbuf[1] = pid->Dbuf[2] = 0.0f;
     pid->error[0] = pid->error[1] = pid->error[2] = pid->Pout = pid->Iout = pid->Dout = pid->out = 0.0f;
-
+    pid->I_Separation=I_Separation;
 }
 
 float PID_Calculate(PID_TypeDef *pid, float set, float ref)
 {
+	  uint8_t index;
 	    if (pid == NULL)
     {
         return 0.0f;
@@ -75,6 +78,14 @@ float PID_Calculate(PID_TypeDef *pid, float set, float ref)
     pid->set = set;
     pid->fdb = ref;
     pid->error[0] = set - ref;
+		if(fabs(pid->error[0]) > pid->I_Separation) //误差过大，采用积分分离
+    {
+        index = 0;
+    }
+    else
+    {
+        index = 1;
+    }
     if (pid->mode == POSITION_PID)	 //位置式PID
     {
         pid->Pout = pid->Kp * pid->error[0];
@@ -82,9 +93,11 @@ float PID_Calculate(PID_TypeDef *pid, float set, float ref)
         pid->Dbuf[2] = pid->Dbuf[1];
         pid->Dbuf[1] = pid->Dbuf[0];
         pid->Dbuf[0] = (pid->error[0] - pid->error[1]);
-        pid->Dout = pid->Kd * pid->Dbuf[0];
+			
+//        pid->Dout = pid->Kd * pid->Dbuf[0];
+			  pid->Dout = pid->Kd * (1 - pid-> gama) * (pid->Dbuf[0]) + pid-> gama * pid-> lastdout; //不完全微分
         abs_limit(&pid->Iout, pid->max_iout);
-        pid->out = pid->Pout + pid->Iout + pid->Dout;
+        pid->out = pid->Pout + index*pid->Iout + pid->Dout;
         abs_limit(&pid->out, pid->max_out);
     }
     else if (pid->mode ==DELTA_PID)	//增量式PID
@@ -99,34 +112,6 @@ float PID_Calculate(PID_TypeDef *pid, float set, float ref)
         abs_limit(&pid->out, pid->max_out);
     }
     return pid->out;
-}
-
-void M3508_follow(PID_TypeDef *pid_6020,float target,int v[])//底盘跟随
-{
-    float n;
-	
-//    if(CAN_GM6020[1].angle>4095)
-//        angle=-8191+CAN_GM6020[1].angle;
-//	else
-//	float angle=CAN_GM6020[0].total_angle/8191*360;
-	 
-	PID_Calculate(pid_6020,target,CAN_GM6020[0].total_angle);
-	n=-pid_6020->out;
-	if(fabs(CAN_GM6020[0].total_angle-target)<300)
-	{
-		CAN_M3508[0].set_current=PID_Calculate(&PID_M3508[0],0+v[0],CAN_M3508[0].speed);
-		CAN_M3508[1].set_current=PID_Calculate(&PID_M3508[1],0+v[1],CAN_M3508[1].speed);
-		CAN_M3508[2].set_current=PID_Calculate(&PID_M3508[2],0+v[2],CAN_M3508[2].speed);
-		CAN_M3508[3].set_current=PID_Calculate(&PID_M3508[3],0+v[3],CAN_M3508[3].speed);
-	}
-	else
-	{
-
-		CAN_M3508[0].set_current=PID_Calculate(&PID_M3508[0],n+v[0],CAN_M3508[0].speed);
-		CAN_M3508[1].set_current=PID_Calculate(&PID_M3508[1],n+v[1],CAN_M3508[1].speed);
-		CAN_M3508[2].set_current=PID_Calculate(&PID_M3508[2],n+v[2],CAN_M3508[2].speed);
-		CAN_M3508[3].set_current=PID_Calculate(&PID_M3508[3],n+v[3],CAN_M3508[3].speed);
-	}
 }
 
 

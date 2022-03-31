@@ -110,6 +110,7 @@ int main(void)
   MX_CRC_Init();
   MX_I2C3_Init();
   MX_TIM3_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   BSP_All_Init();
   /* USER CODE END 2 */
@@ -177,6 +178,7 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void BSP_All_Init(void)	// 初始化所有硬件层
 {
+	  HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
   	HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_3);
     extern uint8_t aTxVisionMessages[22];
     delay_init();
@@ -184,7 +186,7 @@ void BSP_All_Init(void)	// 初始化所有硬件层
     CAN_FilterInit(&hcan1);	// 初始化CAN1的筛选器
     CAN_FilterInit(&hcan2);	// 初始化CAN2的筛选器
 
-    PID_Init(&PID_HEAT_PWM,POSITION_PID,1000,1000,1600,0.2,0);
+    PID_Init(&PID_HEAT_PWM,POSITION_PID,1000,1000,1600,0.2,0,0,0);
     client_state_now.motion=1;
 
     extern uint8_t tmp_vision;

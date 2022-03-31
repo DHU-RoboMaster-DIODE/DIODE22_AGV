@@ -76,9 +76,9 @@ void chassis_task(void const *pvParameters)
     static portTickType lastWakeTime;  
     for(int i=0; i<4; i++)	// 四个底盘电机
     {
-        PID_Init(&PID_M3508[i],DELTA_PID,16000,3000,3,0.02,0);//5,0.01
+        PID_Init(&PID_M3508[i],DELTA_PID,16000,3000,3,0.02,0,0,0);//5,0.01
     }
-		PID_Init(&PID_M3508_Follow,POSITION_PID,1000,1000,3,0,5);
+		PID_Init(&PID_M3508_Follow,POSITION_PID,1000,1000,3,0,5,0,0);
 		chassis_move.chassis_init_angle_set=7066;
     while (1)
     {
@@ -117,6 +117,7 @@ void chassis_task(void const *pvParameters)
 
 void chassis_rc_ctrl(void)
 {  
+	  flag_upup=0;
     switch(actChassis)
     {
     case CHASSIS_FOLLOW_GIMBAL://跟随云台
@@ -176,19 +177,19 @@ void chassis_pc_ctrl(void)
     switch(actChassis)
     {
     case CHASSIS_FOLLOW_GIMBAL://跟随云台
-        chassis_move.vx_set =(fp32)speedx/9.0f; //前后计算
-        chassis_move.vy_set =(fp32)speedy/9.0f; //左右计算
+        chassis_move.vx_set =(fp32)speedx/6.0f; //前后计算
+        chassis_move.vy_set =(fp32)speedy/6.0f; //左右计算
         chassis_move.wz_set=rc.mouse_x/800.0f+PID_Calculate(&PID_M3508_Follow,
 		Find_MIN_ANGLE_Enconder(chassis_move.chassis_init_angle_set,CAN_GM6020[0].angle),0)/1000.0f;//PID使底盘跟随云台速度
         break;
     case CHASSIS_NORMAL://不跟随云台
-        chassis_move.vx_set=(fp32)speedx/9.0f;
-        chassis_move.vy_set=(fp32)speedy/9.0f;
+        chassis_move.vx_set=(fp32)speedx/6.0f;
+        chassis_move.vy_set=(fp32)speedy/6.0f;
         chassis_move.wz_set=0;
         break;
     case CHASSIS_GYROSCOPE:		//小陀螺模式
-        chassis_move.vx_set=(fp32)speedx/9.0f;
-        chassis_move.vy_set=(fp32)speedy/9.0f;
+        chassis_move.vx_set=(fp32)speedx/6.0f;
+        chassis_move.vy_set=(fp32)speedy/6.0f;
         chassis_move.wz_set=-3;
         break;
 		case CHASSIS_SLOW:		//驻留模式

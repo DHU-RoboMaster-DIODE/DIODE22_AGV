@@ -19,7 +19,7 @@
 #include "bsp_can.h"
 #include "INS_task.h"
 #include "user_lib.h"
-#define pitch_angle_min	-32
+#define pitch_angle_min	-20
 #define pitch_angle_max	20
 
 extern uint16_t RC_FLAG;
@@ -61,10 +61,10 @@ float Smooth_control(float smooth_vx,float vx);
 void gimbal_task(void const *pvParameters)
 {  
 //		KalmanCreate(&vis_data_yaw,20,200);
-    PID_Init(&PID_GM6020[0],POSITION_PID,1000,1000,100,0,2000);	//45,0,200  50,1,300云台底部电机500,0,1500  自瞄：1000，0.3，1500     500,0,1500     1200,0.1,4200
-    PID_Init(&PID_GM6020_speed[0],POSITION_PID,30000,10000,100,0,50);//50,0.01,4 50,0,3  0.0001   5 0 0    4000,0,4000
-		PID_Init(&PID_GM6020[1],POSITION_PID,1000,1000,100,0,200);		// 云台侧面电机1600
-    PID_Init(&PID_GM6020_speed[1],POSITION_PID,30000,10000,70,0,0);//0.0001
+    PID_Init(&PID_GM6020[0],POSITION_PID,1000,1000,100,0,1200,0,0.1);	//45,0,200  50,1,300云台底部电机500,0,1500  自瞄：1000，0.3，1500     500,0,1500     1200,0.1,4200
+    PID_Init(&PID_GM6020_speed[0],POSITION_PID,30000,10000,70,0,1,0,0);//50,0.01,4 50,0,3  0.0001   5 0 0    4000,0,4000
+		PID_Init(&PID_GM6020[1],POSITION_PID,1000,1000,90,0,600,0,0.1);		// 云台侧面电机1600
+    PID_Init(&PID_GM6020_speed[1],POSITION_PID,30000,10000,70,0,1,0,0);//0.0001
 
 	  const static fp32 gimbal_yaw_order_filter[1] = {0};
     const static fp32 gimbal_pitch_order_filter[1] = {0};	
@@ -75,8 +75,8 @@ void gimbal_task(void const *pvParameters)
 		
     static portTickType lastWakeTime;   
 	  yaw_angle_set=INS_angle[0];
-	  PID_Init(&PID_GM6020[2],POSITION_PID,300,300,15,0,0);
-	  PID_Init(&PID_GM6020[3],POSITION_PID,300,300,50,0,0);	
+	  PID_Init(&PID_GM6020[2],POSITION_PID,300,300,15,0,0,0,0);
+	  PID_Init(&PID_GM6020[3],POSITION_PID,300,300,50,0,0,0,0);	
     while (1)
     { 
 			 lastWakeTime = xTaskGetTickCount(); 
@@ -117,8 +117,8 @@ void gimbal_rc_ctrl(void)
 		case 2:		
 		case 3:
 			pitch_angle_set += (float)rc.ch1/4000.0f;//俯仰轴
-			if(pitch_angle_set>=pitch_angle_max) pitch_angle_set= pitch_angle_max;
-			else if(pitch_angle_set<=pitch_angle_min) pitch_angle_set= pitch_angle_min; 
+			if(pitch_angle_set>=pitch_angle_max) pitch_angle_set-= 0.02f*(pitch_angle_set-pitch_angle_max);
+			else if(pitch_angle_set<=pitch_angle_min) pitch_angle_set+=0.02f* (pitch_angle_min-pitch_angle_set); 
 		  yaw_angle_set -=(float)rc.ch0/3000.0f;
 		  yaw_angle_set=Find_MIN_ANGLE(yaw_angle_set,0);
 		  
@@ -132,14 +132,14 @@ void gimbal_rc_ctrl(void)
 float pitch_angle_set_delta,yaw_angle_set_delta;
 void gimbal_pc_ctrl(void)
 {
-	 pitch_angle_set_delta=(float)rc.mouse_y/30.0f;
-	 yaw_angle_set_delta=(float)rc.mouse_x/30.0f;
+	 pitch_angle_set_delta=(float)rc.mouse_y/300.0f;
+	 yaw_angle_set_delta=(float)rc.mouse_x/300.0f;
 ////   first_order_filter_cali(&gimbal_cmd_slow_set_yaw, yaw_angle_set_delta);
 ////   first_order_filter_cali(&gimbal_cmd_slow_set_pitch,pitch_angle_set_delta);
 
 	 pitch_angle_set -=pitch_angle_set_delta;
-	 if(pitch_angle_set>=pitch_angle_max) pitch_angle_set= pitch_angle_max;
-	 else if(pitch_angle_set<=pitch_angle_min) pitch_angle_set= pitch_angle_min;
+	 if(pitch_angle_set>=pitch_angle_max) pitch_angle_set-= 0.02f*(pitch_angle_set-pitch_angle_max);
+	 else if(pitch_angle_set<=pitch_angle_min)pitch_angle_set+=0.02f* (pitch_angle_min-pitch_angle_set); 
 	
 	 yaw_angle_set -=yaw_angle_set_delta;
 	 yaw_angle_set=Find_MIN_ANGLE(yaw_angle_set,0);

@@ -231,7 +231,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)  //接收回调�
                 CAN_M3508[1].current=(rx_data[4]<<8)+rx_data[5];
                 CAN_M3508[1].temperature=(rx_data[6]<<8);
             }
-            else if(RxMeg.StdId == 0x212)	/* 0x203 ~ 0x204*/
+            else if(RxMeg.StdId == 0x222)	/* 0x203 ~ 0x204*/
             {
                 CAN1_CNT ++;
                 // 将数据保存在结构体中
@@ -239,11 +239,15 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)  //接收回调�
                 chassis_speed.vy=(int16_t)((rx_data[2]<<8)+rx_data[3]);
                 chassis_speed.wz=(int16_t)((rx_data[4]<<8)+rx_data[5]);
                 rc_flag=rx_data[6];
-							  chassis_power_limit=(float)((rx_data[7]<<8)+rx_data[8]);
-							  flag_upup=rx_data[9];
+            }
+            else if(RxMeg.StdId == 0x223)	/* 0x203 ~ 0x204*/
+            {
+                CAN1_CNT ++;
+                // 将数据保存在结构体中
+							  chassis_power_limit=(float)((rx_data[0]<<8)+rx_data[1]);
+							  flag_upup=rx_data[2];
 							  if(chassis_power_limit<45)  chassis_power_limit=45;
             }
-
             else if(RxMeg.StdId == 0x211) {//接收超级电容的数据
                 extern float powerData[4];
                 uint16_t *pPowerdata = (uint16_t *)rx_data;

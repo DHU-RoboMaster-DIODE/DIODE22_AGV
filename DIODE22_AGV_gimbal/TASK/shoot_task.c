@@ -11,6 +11,8 @@
 #include "shoot_task.h"
 #include "JudgeTask.h"
 
+
+uint8_t magazine_flag = 1;
 uint16_t time_shoot;
 extern uint16_t RC_FLAG;
 uint8_t ShotFlag;  //记录发射模式选择枪管
@@ -42,10 +44,10 @@ void shoot_task(void const *pvParameters)
     osDelay(SHOOT_CONTROL_INIT_TIME);
     shoot_speed=4200;//摩擦轮速度
     dial_speed_set=1500;//拨弹速度4350
-    PID_Init(&PID_M2006[0],POSITION_PID,16000,5000,8,0,0.1);		// 发射左拨盘电机 速度闭环
+    PID_Init(&PID_M2006[0],POSITION_PID,16000,5000,8,0,0.1,0,0);		// 发射左拨盘电机 速度闭环
     for(int i=1; i<3; i++)	// 两个摩擦轮电机
     {
-        PID_Init(&PID_M3508[i],POSITION_PID,16000,16000,2.5,0,0);// 0.01//5 0.1 0.1
+        PID_Init(&PID_M3508[i],POSITION_PID,16000,16000,2.5,0,0,0,0);// 0.01//5 0.1 0.1
     }	
     static portTickType lastWakeTime;
     lastWakeTime = xTaskGetTickCount();
@@ -85,6 +87,10 @@ void shoot_pc_ctrl(void){
 		  shoot_flag.shoot_continuous=1;
 	}
 	if 	(rc.mouse_press_l==0)shoot_flag.shoot_continuous=0;
+	if(rc.key[15])//按b开弹仓
+		magazine_flag = 1;
+	if(rc.key[14])//按v关弹仓
+		magazine_flag = 0;
 }
 
 void shoot_rc_ctrl(void) {
@@ -99,6 +105,10 @@ void shoot_rc_ctrl(void) {
     }
 }
 void shoot_control_loop(void){
+	
+	if(magazine_flag)__HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 2650);
+	else  __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1,480 );//弹仓盖标志
+	
 	if(game_robot_states.shooter_id1_17mm_cooling_limit-power_heat_data.shooter_id1_17mm_cooling_heat <17)
 		shoot_flag.shoot_continuous = 0;//热量限制
 	  //摩擦轮输出

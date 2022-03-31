@@ -176,7 +176,7 @@ void CAN_Shoot_SendCurrent(void)
 }
 void CAN_TA(void)
 {
-    uint8_t data[10];
+    uint8_t data[8];
 
     data[0] = (int16_t)absolute_chassis.vx >> 8;
     data[1] = (int16_t)absolute_chassis.vx;
@@ -185,12 +185,21 @@ void CAN_TA(void)
     data[4] = (int16_t)absolute_chassis.wz >> 8;
     data[5] = (int16_t)absolute_chassis.wz;
     data[6] = rc_flag;
-    data[7] = (int16_t)game_robot_states.chassis_power_limit>> 8;
-	  data[8] = (int16_t)game_robot_states.chassis_power_limit;
-    data[9] = flag_upup;
-    CAN_SendMsg(&hcan1,0,0x212,10,data);
-}
+    data[7] = 0;
+    CAN_SendMsg(&hcan1,0,0x222,8,data);
+	
 
+    data[0] = (int16_t)game_robot_states.chassis_power_limit>> 8;
+	  data[1] = (int16_t)game_robot_states.chassis_power_limit;
+    data[2] = flag_upup;
+    data[3] = 0;
+    data[4] = 0;
+    data[5] = 0;
+    data[6] = 0;	
+    data[7] = 0;	
+
+    CAN_SendMsg(&hcan1,0,0x223,8,data);
+}
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)  //接收回调函数
 {
     HAL_StatusTypeDef		HAL_RetVal;	// 接受状态

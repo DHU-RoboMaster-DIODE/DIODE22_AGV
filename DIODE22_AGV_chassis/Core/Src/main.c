@@ -176,7 +176,6 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void BSP_All_Init(void)	// 初始化所有硬件层
 {
-    uint8_t i=0;	// 计数
     extern uint8_t aTxVisionMessages[22];
 
     while(BMI088_init())
@@ -192,32 +191,12 @@ void BSP_All_Init(void)	// 初始化所有硬件层
     CAN_FilterInit(&hcan2);	// 初始化CAN2的筛选器
 
 
-//    PID_Init(&PID_M3508[6],POSITION_PID,15000,16000,5,0.1,0.1);		// 发射拨盘电机 速度闭环 10 0.1 0.2    5/15：15,0.1,0.2
-//    PID_Init(&PID_M3508_ANGLE[6],POSITION_PID,15000,5000,20,0.1,0.1);	// 发射拨盘电机 角度闭环    15,0,50   5/15：15,0.1,60     5/16：70,0.1,250
-    PID_Init(&PID_M3508[6],DELTA_PID,15000,16000,500,0,1000);		// 发射拨盘电机 速度闭环 10 0.1 0.2    5/15：15,0.1,0.2
-    PID_Init(&PID_M3508_ANGLE[6],POSITION_PID,10000,16384,80,0.1,300);	// 发射拨盘电机 角度闭环    15,0,50   5/15：15,0.1,60     5/16：70,0.1,250
-
-
-
-    for(i=4; i<6; i++)	// 两个摩擦轮电机
-    {
-        PID_Init(&PID_M3508[i],DELTA_PID,17000,20000,3.5,0.1,0.1);// 0.01//5 0.1 0.1
-    }
-    PID_Init(&PID_M3508_Follow[0],POSITION_PID,3000,10000,10,0,0);
-    PID_Init(&PID_M3508_Follow[1],POSITION_PID,4000,10000,50,0,0);
-    PID_Init(&PID_HEAT_PWM,POSITION_PID,1000,1000,1600,0.2,0);
     client_state_now.motion=1;
 
     extern uint8_t tmp_vision;
 
-//    HAL_UART_Receive_IT(&JUDGE_UART, (uint8_t *)aRxBuffer, 1);  //串口6裁判系统  串口1视觉
-//    HAL_UART_Receive_DMA(&VISION_UART, &tmp_vision, 1);
-//    HAL_UART_Transmit_DMA(&VISION_UART,(uint8_t*)aTxVisionMessages,sizeof(aTxVisionMessages));
-		
-//    InitJudgeUart();
     dbus_uart_init();		// 初始化遥控器
-//	LASER_On();		// 开启激光
-//  LASER_Off();	// 关闭激光
+
     Beep(200);
 }
 /* USER CODE END 4 */

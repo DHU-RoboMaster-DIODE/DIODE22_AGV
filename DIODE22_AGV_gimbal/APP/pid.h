@@ -12,7 +12,6 @@ enum {
     POSITION_PID,
     DELTA_PID,
 };
-extern uint8_t motionflag;
 typedef struct _PID_Typedef
 {
 	  uint8_t mode;
@@ -22,8 +21,8 @@ typedef struct _PID_Typedef
     fp32 max_out;  //最大输出
     fp32 max_iout; //最大积分输出
 
-    fp32 set;
-    fp32 fdb;
+    fp32 set;  //设定值
+    fp32 fdb;  //反馈值
 
     fp32 out;
     fp32 Pout;
@@ -31,6 +30,9 @@ typedef struct _PID_Typedef
     fp32 Dout;
     fp32 Dbuf[3];  //微分项 0最新 1上一次 2上上次
     fp32 error[3]; //误差项 0最新 1上一次 2上上次
+    float I_Separation; //积分分离阈值，当偏差大于阈值时，消除积分仅用PD控制
+    float gama;			//微分先行滤波系数
+    float lastdout;		//上一次微分输出
 } PID_TypeDef;
 
 extern PID_TypeDef PID_GM6020[6];	// 定义GM6020 PID结构体
@@ -49,13 +51,13 @@ void PID_Init(
     uint32_t 			intergral_limit,
     float 				kp,
     float 				ki,
-    float 				kd
+    float 				kd,
+	  float I_Separation,float gama
 );
 void PID_Reset(PID_TypeDef	*pid, float kp, float ki, float kd);
 
 float PID_Calculate(PID_TypeDef *pid, float target, float feedback);
-void M3508_follow(PID_TypeDef *pid_6020,float target,int v[]);
-void M3508_follow_2(PID_TypeDef *pid_6020,float target,float angle,float speed,float target2);
+
 	
 #endif
 

@@ -50,9 +50,8 @@ void chassis_task(void const *pvParameters)
 		spin_speed=1000;//小陀螺速度
 	  for(int i=0; i<4; i++)	// 四个底盘电机
     {
-        PID_Init(&PID_M3508[i],POSITION_PID,16000,16000,2,0,1.5);//5,0.01
-			  PID_Init(&PID_GM6020[i],POSITION_PID,10000,10000,50,0.001,150);
-////			  PID_Init(&PID_GM6020_speed[i],POSITION_PID,30000,30000,100,0,10);
+        PID_Init(&PID_M3508[i],POSITION_PID,16000,16000,3,0.02,5,300,0);//5,0.01
+			  PID_Init(&PID_GM6020[i],POSITION_PID,10000,10000,20,0,50,0,0.1);
     }
     static portTickType lastWakeTime;  
 		lastWakeTime = xTaskGetTickCount(); 
@@ -90,7 +89,7 @@ double Radius=1.0;//越大右摇杆控制越强
 int flag_a[4]={1,1,1,1};
 int drct[4]={1,1,1,1};//3508反转因子
 double angle_temp[4];  
-double CHASSIS_6020_Y_ANGLE[4]={1790,3737,1902,1617};//6020初始角度，此时3508全朝向前方，且向前为正
+double CHASSIS_6020_Y_ANGLE[4]={1797,3738,1780,1645};//6020初始角度，此时3508全朝向前方，且向前为正 1797, 3738, 5876, 1645
 double wheel_angle_last[4]={1790,3737,1902,1617};    //
 int flag_drct=1;
 
@@ -99,13 +98,13 @@ void calc_6020_angle(void);//6020角度解算
 float Find_min_Angle(float angle1,float angle2);
 void AngleLoop_int(int16_t *a,int n);
 void AngleLoop_f(double *a,int n);
-
+float setAngle_min[4];
 void chassis_rc_ctrl(void)
 {  
 
-      Vx=-(double)chassis_speed.vy/10.0f;
-			Vy=(double)chassis_speed.vx/10.0f;    
-      Vw=(double)chassis_speed.wz;    
+      Vx=-(double)chassis_speed.vy/12.0f;
+			Vy=(double)chassis_speed.vx/12.0f;    
+      Vw=(double)chassis_speed.wz;
 		
 		calc_3508_speed();
 		calc_6020_angle();
@@ -126,27 +125,25 @@ void chassis_rc_ctrl(void)
 //			for( ; setAngle[i] > 8191; )setAngle[i] -= 8191;
 //	    for( ; setAngle[i] < 0; )setAngle[i]+= 8191;
 //		}  
-//		
-  static float setAngle_min[4];
+
+
   if(Vx == 0 && Vy == 0 && Vw == 0)//摇杆回中,保持原角度
   {
     for(int i=0;i<4;i++)
      setAngle[i] = wheel_angle_last[i];
+;
   }
-//  else
-//  {
-    for(int i=0;i<4;i++)
+	  for(int i=0;i<4;i++)
 		  wheel_angle_last[i] = CAN_GM6020[i].angle;
-//  }   
-
 		for(int i=0;i<4;i++){
 	           setAngle_min[i]=Find_min_Angle(setAngle[i], CAN_GM6020[i].angle);
                if(-4096<=setAngle_min[i] && setAngle_min[i]<-2048) drct[i]=-1,setAngle_min[i]+=4096;
                else if(2048<setAngle_min[i] && setAngle_min[i]<=4096) drct[i]=-1,setAngle_min[i]-=4096;
                else drct[i]=1;	
 			   CAN_GM6020[i].set_voltage =  PID_Calculate(&PID_GM6020[i],setAngle_min[i] ,0);	
-			   if(setAngle_min[i]<100)CAN_M3508[i].set_current  =   PID_Calculate(&PID_M3508[i], (drct[i])*(setSpeed[i]), CAN_M3508[i].speed);
+			   if(setAngle_min[i]<200)CAN_M3508[i].set_current  =   PID_Calculate(&PID_M3508[i], (drct[i])*(setSpeed[i]), CAN_M3508[i].speed);
 		}
+
 		if(flag_drct){
 			for(int i=0;i<4;i++)drct[i]=1;
 			flag_drct=0;
@@ -238,35 +235,41 @@ float Find_min_Angle(float angle1,float angle2)
     return temp;
 }
 
-
-void Chassis_Power_Limit(void)
+  float    fTotalCurrentLimit;//计算的得到带的限制总输出电流
+	float    chassis_3508_totaloutput = 0;//统计总输出电流
+	float    chassis_6020_totaloutput = 0;
+ void Chassis_Power_Limit(void)
 {	
-	float    kLimit = 1;//功率限制系数
-	float    chassis_totaloutput = 0;//统计总输出电流
-  static float fTotalCurrentLimit;
-	
+	float    kLimit = 0.9;//功率限制系数
 	//统计底盘总输出
-	chassis_totaloutput = abs(CAN_M3508[0].current) + abs(CAN_M3508[1].current)
-							+ abs(CAN_M3508[2].current) + abs(CAN_M3508[3].current);
+	chassis_3508_totaloutput= abs(CAN_M3508[0].set_current) + abs(CAN_M3508[1].set_current)
+							+ abs(CAN_M3508[2].set_current) + abs(CAN_M3508[3].set_current);
+	//计算限制电流
+	chassis_6020_totaloutput=abs(CAN_GM6020[0].set_voltage) + abs(CAN_GM6020[1].set_voltage)
+							+ abs(CAN_GM6020[2].set_voltage) + abs(CAN_GM6020[3].set_voltage);
+	fTotalCurrentLimit=(float)(chassis_power_limit-chassis_6020_totaloutput/1500)/24.0f*3000;
+  if(fTotalCurrentLimit<0) fTotalCurrentLimit=0;
+	//放电策略，调整功率限制函数
 	
-  if(powerData[1]>18) fTotalCurrentLimit=(float)(chassis_power_limit/powerData[1])*1000*kLimit;
-  else fTotalCurrentLimit=chassis_power_limit/18.0f*1000*kLimit;
 	if(powerData[1]<=16){
-    fTotalCurrentLimit*=0.95f;
+    kLimit=0.25f*(powerData[1]-14.0f)+0.5f;
 	}
-	else if(flag_upup){
-			fTotalCurrentLimit=65535;
+	else if(flag_upup==1){
+			kLimit=5;  //不限制电流
 	}
-  else if(!flag_upup){
+  else{
+		if(powerData[1]>21)kLimit=1.5;
+		else if(powerData[1]<=21)kLimit=0.25f*(powerData[1]-19.0f)+0.5f;
 	}
-	
+	fTotalCurrentLimit*=kLimit;
+  if(fTotalCurrentLimit<0) fTotalCurrentLimit=0;
 	//底盘各电机电流重新分配
-	if (chassis_totaloutput > fTotalCurrentLimit)
+	if (chassis_3508_totaloutput > fTotalCurrentLimit)
 	{
-		CAN_M3508[0].current = (int16_t)(CAN_M3508[0].current / chassis_totaloutput * fTotalCurrentLimit);
-		CAN_M3508[1].current = (int16_t)(CAN_M3508[1].current / chassis_totaloutput * fTotalCurrentLimit);
-		CAN_M3508[2].current = (int16_t)(CAN_M3508[2].current / chassis_totaloutput * fTotalCurrentLimit);
-		CAN_M3508[3].current = (int16_t)(CAN_M3508[3].current / chassis_totaloutput * fTotalCurrentLimit);	
+		CAN_M3508[0].set_current = (int16_t)(CAN_M3508[0].set_current / chassis_3508_totaloutput * fTotalCurrentLimit);
+		CAN_M3508[1].set_current = (int16_t)(CAN_M3508[1].set_current / chassis_3508_totaloutput * fTotalCurrentLimit);
+		CAN_M3508[2].set_current = (int16_t)(CAN_M3508[2].set_current / chassis_3508_totaloutput * fTotalCurrentLimit);
+		CAN_M3508[3].set_current = (int16_t)(CAN_M3508[3].set_current / chassis_3508_totaloutput * fTotalCurrentLimit);	
 	}
 }
 

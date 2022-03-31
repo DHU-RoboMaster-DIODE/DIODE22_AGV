@@ -378,6 +378,7 @@ void DMA2_Stream7_IRQHandler(void)
   * @brief This function handles USART6 global interrupt.
   */
 
+
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */

@@ -13,8 +13,8 @@
 
 #define RACEFLAG 0
 #define __weak		__attribute__((weak))
-#define pitch_angle_min	-20 //6280
-#define pitch_angle_max	20//7400
+#define pitch_angle_min	-18 //6280
+#define pitch_angle_max	18//7400
 extern VisionData datadata;
 extern float total_C_yaw;
 extern uint8_t coolingflag;
