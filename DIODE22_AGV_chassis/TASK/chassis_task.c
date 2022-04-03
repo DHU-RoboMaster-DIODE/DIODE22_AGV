@@ -50,7 +50,7 @@ void chassis_task(void const *pvParameters)
 		spin_speed=1000;//小陀螺速度
 	  for(int i=0; i<4; i++)	// 四个底盘电机
     {
-        PID_Init(&PID_M3508[i],POSITION_PID,16000,16000,3,0.02,5,300,0);//5,0.01
+        PID_Init(&PID_M3508[i],POSITION_PID,16000,16000,4,0.02,5,300,0);//5,0.01
 			  PID_Init(&PID_GM6020[i],POSITION_PID,10000,10000,20,0,50,0,0.1);
     }
     static portTickType lastWakeTime;  
@@ -258,8 +258,8 @@ float Find_min_Angle(float angle1,float angle2)
 			kLimit=5;  //不限制电流
 	}
   else{
-		if(powerData[1]>21)kLimit=1.5;
-		else if(powerData[1]<=21)kLimit=0.25f*(powerData[1]-19.0f)+0.5f;
+		if(powerData[1]>20)kLimit=1.5;
+		else if(powerData[1]<=20)kLimit=0.25f*(powerData[1]-18.0f)+0.5f;
 	}
 	fTotalCurrentLimit*=kLimit;
   if(fTotalCurrentLimit<0) fTotalCurrentLimit=0;

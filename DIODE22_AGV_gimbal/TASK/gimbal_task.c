@@ -47,12 +47,11 @@ extern double imu_last_anglesum;
 double last_imu_yaw;
 //extKalman_t imu_speed;
 //extKalman_t pit_data_speed;
-
+void Smooth_control_gimbal(float *smooth_vx,float vx,float step);
 void angle_sum(void);
 void gimbal_rc_ctrl(void);
 void gimbal_pc_ctrl(void);
 void gimbal_control_loop(void);
-float Smooth_control(float smooth_vx,float vx);
 /**
   * @brief          云台任务，绝对延时 CHASSIS_CONTROL_TIME_MS 2ms
   * @param[in]      pvParameters: 空
@@ -61,8 +60,8 @@ float Smooth_control(float smooth_vx,float vx);
 void gimbal_task(void const *pvParameters)
 {  
 //		KalmanCreate(&vis_data_yaw,20,200);
-    PID_Init(&PID_GM6020[0],POSITION_PID,1000,1000,100,0,1200,0,0.1);	//45,0,200  50,1,300云台底部电机500,0,1500  自瞄：1000，0.3，1500     500,0,1500     1200,0.1,4200
-    PID_Init(&PID_GM6020_speed[0],POSITION_PID,30000,10000,70,0,1,0,0);//50,0.01,4 50,0,3  0.0001   5 0 0    4000,0,4000
+    PID_Init(&PID_GM6020[0],POSITION_PID,1000,1000,100,0,1800,0,0.1);	//45,0,200  50,1,300云台底部电机500,0,1500  自瞄：1000，0.3，1500     500,0,1500     1200,0.1,4200
+    PID_Init(&PID_GM6020_speed[0],POSITION_PID,30000,10000,60,0,1,0,0);//50,0.01,4 50,0,3  0.0001   5 0 0    4000,0,4000
 		PID_Init(&PID_GM6020[1],POSITION_PID,1000,1000,90,0,600,0,0.1);		// 云台侧面电机1600
     PID_Init(&PID_GM6020_speed[1],POSITION_PID,30000,10000,70,0,1,0,0);//0.0001
 
@@ -104,7 +103,6 @@ void gimbal_task(void const *pvParameters)
         		CAN_GM6020[0].set_voltage=0;
             CAN_GM6020[1].set_voltage=0;
 			 }
-//			 CAN_GM6020[0].set_voltage=0;
        CAN_Gimbal_SendVoltage();
        //系统绝对延时
        osDelayUntil(&lastWakeTime,GIMBAL_CONTROL_TIME_MS);
@@ -133,14 +131,11 @@ float pitch_angle_set_delta,yaw_angle_set_delta;
 void gimbal_pc_ctrl(void)
 {
 	 pitch_angle_set_delta=(float)rc.mouse_y/300.0f;
-	 yaw_angle_set_delta=(float)rc.mouse_x/300.0f;
-////   first_order_filter_cali(&gimbal_cmd_slow_set_yaw, yaw_angle_set_delta);
-////   first_order_filter_cali(&gimbal_cmd_slow_set_pitch,pitch_angle_set_delta);
-
+   yaw_angle_set_delta=(float)rc.mouse_x/400.0f;
 	 pitch_angle_set -=pitch_angle_set_delta;
 	 if(pitch_angle_set>=pitch_angle_max) pitch_angle_set-= 0.02f*(pitch_angle_set-pitch_angle_max);
 	 else if(pitch_angle_set<=pitch_angle_min)pitch_angle_set+=0.02f* (pitch_angle_min-pitch_angle_set); 
-	
+
 	 yaw_angle_set -=yaw_angle_set_delta;
 	 yaw_angle_set=Find_MIN_ANGLE(yaw_angle_set,0);
 		  
@@ -161,12 +156,12 @@ fp32 Find_MIN_ANGLE(float set,float feed)
     return temp;
 }
 
-float Smooth_control(float smooth_vx,float vx)
+void Smooth_control_gimbal(float *smooth_vx,float vx,float step)
 {
-	float step=0.2;
-	if     (vx>smooth_vx) smooth_vx+=step;
-	else if(vx<smooth_vx) smooth_vx-=step;
-	else                         smooth_vx=vx;
-	if(vx==0) smooth_vx=0;
-	return smooth_vx;
+	if     (vx>*smooth_vx) *smooth_vx+=step;
+	else if(vx<*smooth_vx) *smooth_vx-=step;
+	else                    *smooth_vx=vx;
+	if(vx==0&&*smooth_vx>-step*5&&*smooth_vx<step*5) *smooth_vx=0;
+	return;
 }
+

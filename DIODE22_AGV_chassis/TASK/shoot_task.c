@@ -33,7 +33,7 @@ void shoot_task(void const *pvParameters)
 {
     //空闲一段时间
     osDelay(SHOOT_CONTROL_INIT_TIME);
-	  shoot_speed=5000;//摩擦轮速度
+	  shoot_speed=4900;//摩擦轮速度
 	  dial_speed=500;//拨弹速度4350
     static portTickType lastWakeTime;  
 		lastWakeTime = xTaskGetTickCount(); 

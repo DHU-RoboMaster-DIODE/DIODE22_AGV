@@ -42,9 +42,9 @@ void shoot_task(void const *pvParameters)
 {
     //空闲一段时间
     osDelay(SHOOT_CONTROL_INIT_TIME);
-    shoot_speed=4200;//摩擦轮速度
+    shoot_speed=4100;//摩擦轮速度
     dial_speed_set=1500;//拨弹速度4350
-    PID_Init(&PID_M2006[0],POSITION_PID,16000,5000,8,0,0.1,0,0);		// 发射左拨盘电机 速度闭环
+    PID_Init(&PID_M2006[0],POSITION_PID,16000,5000,8,0.005,0.1,0,0);		// 发射左拨盘电机 速度闭环
     for(int i=1; i<3; i++)	// 两个摩擦轮电机
     {
         PID_Init(&PID_M3508[i],POSITION_PID,16000,16000,2.5,0,0,0,0);// 0.01//5 0.1 0.1
@@ -158,5 +158,5 @@ void shoot_control_loop(void){
 			CAN_M2006[0].set_current = PID_Calculate(&PID_M2006[0],-dial_speed, CAN_M2006[0].speed);	
 		}	
 		else
-			CAN_M2006[0].set_current = 0;	
+			CAN_M2006[0].set_current =0;	
 }
